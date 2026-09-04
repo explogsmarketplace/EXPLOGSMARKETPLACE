@@ -8,23 +8,39 @@ import {
   doc,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { db, requireFirebase } from '@/lib/firebase'
 import { listingsSeed } from '@/data/listings.seed'
 import { getCategories } from '@/lib/categoriesStore'
 
-const listingsCol = collection(db, 'listings')
-
 let seedPromise = null
 
+function idFromName(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+}
+
+function listingsCol() {
+  return collection(db, 'listings')
+}
+
+function fallbackListings() {
+  return listingsSeed.map((item) => ({
+    id: idFromName(item.name),
+    ...item,
+    categoryId: idFromName(item.category),
+    categoryName: item.category,
+  }))
+}
+
 async function seedIfEmpty() {
+  if (!db) return
   if (seedPromise) return seedPromise
   seedPromise = (async () => {
-    const snap = await getDocs(listingsCol)
+    const snap = await getDocs(listingsCol())
     if (!snap.empty) return
     const categories = await getCategories()
     for (const item of listingsSeed) {
       const category = categories.find((c) => c.name === item.category)
-      await addDoc(listingsCol, {
+      await addDoc(listingsCol(), {
         name: item.name,
         description: item.description,
         image: item.image,
@@ -45,18 +61,21 @@ function fromDoc(d) {
 }
 
 export async function getListings() {
+  if (!db) return fallbackListings()
   await seedIfEmpty()
-  const snap = await getDocs(listingsCol)
+  const snap = await getDocs(listingsCol())
   return snap.docs.map(fromDoc)
 }
 
 export async function getListingById(id) {
+  if (!db) return fallbackListings().find((item) => item.id === id) || null
   const snap = await getDoc(doc(db, 'listings', id))
   return snap.exists() ? fromDoc(snap) : null
 }
 
 export async function addListing(listing) {
-  const docRef = await addDoc(listingsCol, {
+  requireFirebase()
+  const docRef = await addDoc(listingsCol(), {
     inStock: true,
     features: [],
     ...listing,
@@ -66,10 +85,12 @@ export async function addListing(listing) {
 }
 
 export async function updateListing(id, data) {
+  requireFirebase()
   await updateDoc(doc(db, 'listings', id), data)
 }
 
 export async function toggleStock(id) {
+  requireFirebase()
   const current = await getListingById(id)
   if (!current) return null
   const inStock = !current.inStock
@@ -78,5 +99,6 @@ export async function toggleStock(id) {
 }
 
 export async function deleteListing(id) {
+  requireFirebase()
   await deleteDoc(doc(db, 'listings', id))
 }

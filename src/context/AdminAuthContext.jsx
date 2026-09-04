@@ -5,7 +5,7 @@ import {
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { auth } from '@/lib/firebase'
+import { auth, firebaseConfigError, isFirebaseConfigured } from '@/lib/firebase'
 import { admin } from '@/config/site'
 
 const AdminAuthContext = createContext(null)
@@ -14,10 +14,21 @@ export function AdminAuthProvider({ children }) {
   const [user, setUser] = useState(undefined)
   const [error, setError] = useState('')
 
-  useEffect(() => onAuthStateChanged(auth, setUser), [])
+  useEffect(() => {
+    if (!isFirebaseConfigured) {
+      setUser(null)
+      setError(firebaseConfigError)
+      return undefined
+    }
+    return onAuthStateChanged(auth, setUser)
+  }, [])
 
   const login = useCallback(async (email, password) => {
     setError('')
+    if (!isFirebaseConfigured) {
+      setError(firebaseConfigError || 'Firebase is not configured.')
+      return false
+    }
     try {
       await signInWithEmailAndPassword(auth, email, password)
       return true
@@ -38,7 +49,7 @@ export function AdminAuthProvider({ children }) {
     }
   }, [])
 
-  const logout = useCallback(() => signOut(auth), [])
+  const logout = useCallback(() => (isFirebaseConfigured ? signOut(auth) : undefined), [])
 
   return (
     <AdminAuthContext.Provider value={{ isAuthed: !!user, authReady: user !== undefined, login, logout, error }}>

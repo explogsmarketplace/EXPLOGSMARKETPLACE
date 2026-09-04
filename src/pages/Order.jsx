@@ -55,6 +55,7 @@ export default function Order() {
   const [form, setForm] = useState({ fullName: '', whatsapp: '', email: '', note: '' })
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     getListingById(slug).then(setListing)
@@ -68,14 +69,20 @@ export default function Order() {
     e.preventDefault()
     if (!form.fullName.trim() || !form.whatsapp.trim()) return
     setSubmitting(true)
-    await addOrder({
-      listingId: listing.id,
-      listingName: listing.name,
-      price: listing.price,
-      ...form,
-    })
-    setSubmitting(false)
-    setSubmitted(true)
+    setError('')
+    try {
+      await addOrder({
+        listingId: listing.id,
+        listingName: listing.name,
+        price: listing.price,
+        ...form,
+      })
+      setSubmitted(true)
+    } catch (err) {
+      setError(err.message || 'Could not submit this order. Please contact us on WhatsApp.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (!listing) {
@@ -202,6 +209,12 @@ export default function Order() {
               ))}
             </div>
           </div>
+
+          {error && (
+            <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+              {error}
+            </p>
+          )}
 
           <Button type="submit" size="lg" disabled={submitting} className="w-full">
             {submitting ? 'Submitting...' : 'I Have Paid, Notify Seller'}

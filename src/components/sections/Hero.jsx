@@ -24,7 +24,7 @@ export default function Hero() {
           <div>
             <Reveal>
               <span className="inline-flex items-center gap-2 rounded-full border border-gold-500/30 bg-gold-500/10 px-4 py-1.5 text-xs font-medium tracking-wide text-gold-300">
-                The World's Digital Asset Marketplace
+                The World&apos;s Digital Asset Marketplace
               </span>
             </Reveal>
 
